@@ -1,0 +1,102 @@
+INCOME
+Total Revenue                                                 123945000000.0
+Operating Revenue                                             123945000000.0
+Cost Of Revenue                                                69702000000.0
+Gross Profit                                                   54243000000.0
+Operating Expense                                              12755000000.0
+Selling General And Administration                              6449000000.0
+Research And Development                                        6306000000.0
+Operating Income                                               41488000000.0
+Net Non Operating Interest Income Expense                        -44000000.0
+Interest Income Non Operating                                    650000000.0
+Interest Expense Non Operating                                   694000000.0
+Other Income Expense                                            -203000000.0
+Other Non Operating Income Expenses                             -203000000.0
+Pretax Income                                                  41241000000.0
+Tax Provision                                                   6611000000.0
+Net Income Common Stockholders                                 34630000000.0
+Net Income                                                     34630000000.0
+Net Income Including Noncontrolling Interests                  34630000000.0
+Net Income Continuous Operations                               34630000000.0
+Diluted NI Availto Com Stockholders                            34630000000.0
+Basic EPS                                                               2.11
+Diluted EPS                                                              2.1
+Basic Average Shares                                           16391724000.0
+Diluted Average Shares                                         16519291000.0
+Total Operating Income As Reported                             41488000000.0
+Total Expenses                                                 82457000000.0
+Net Income From Continuing And Discontinued Operation          34630000000.0
+Normalized Income                                              34630000000.0
+Interest Income                                                  650000000.0
+Interest Expense                                                 694000000.0
+Net Interest Income                                              -44000000.0
+EBIT                                                           41935000000.0
+Reconciled Cost Of Revenue                                     69702000000.0
+Reconciled Depreciation                                         2697000000.0
+Net Income From Continuing Operation Net Minority Interest     34630000000.0
+Normalized EBITDA                                              44632000000.0
+Tax Rate For Calcs                                                      0.16
+Tax Effect Of Unusual Items                                              0.0
+Name: 2021-12-31 00:00:00, dtype: object
+
+
+CASHFLOW
+Operating Cash Flow                               22892000000.0
+Cash Flow From Continuing Operating Activities    22892000000.0
+Net Income From Continuing Operations             19442000000.0
+Depreciation Amortization Depletion                2805000000.0
+Depreciation And Amortization                      2805000000.0
+Deferred Tax                                       1668000000.0
+Deferred Income Tax                                1668000000.0
+Stock Based Compensation                           2243000000.0
+Other Non Cash Items                                -41000000.0
+Change In Working Capital                         -3225000000.0
+Change In Receivables                              3165000000.0
+Changes In Account Receivables                     -981000000.0
+Change In Inventory                                 -16000000.0
+Change In Payables And Accrued Expense            -4358000000.0
+Change In Payable                                 -4358000000.0
+Change In Account Payable                         -4358000000.0
+Change In Other Current Assets                      253000000.0
+Change In Other Current Liabilities               -1902000000.0
+Change In Other Working Capital                    -367000000.0
+Investing Cash Flow                                4234000000.0
+Cash Flow From Continuing Investing Activities     4234000000.0
+Net PPE Purchase And Sale                         -2102000000.0
+Purchase Of PPE                                   -2102000000.0
+Net Business Purchase And Sale                       -2000000.0
+Purchase Of Business                                 -2000000.0
+Net Investment Purchase And Sale                   6953000000.0
+Purchase Of Investment                            -8191000000.0
+Sale Of Investment                                15144000000.0
+Net Other Investing Changes                        -615000000.0
+Financing Cash Flow                              -27445000000.0
+Cash Flow From Continuing Financing Activities   -27445000000.0
+Net Issuance Payments Of Debt                       971000000.0
+Net Long Term Debt Issuance                       -3000000000.0
+Long Term Debt Issuance                                     0.0
+Long Term Debt Payments                           -3000000000.0
+Net Short Term Debt Issuance                       3971000000.0
+Short Term Debt Issuance                           3971000000.0
+Net Common Stock Issuance                        -21865000000.0
+Net Income Continuous Operations                              19442000000.0
+Diluted NI Availto Com Stockholders                           19442000000.0
+Basic EPS                                                               1.2
+Diluted EPS                                                             1.2
+Basic Average Shares                                          16162945000.0
+Diluted Average Shares                                        16262203000.0
+Total Operating Income As Reported                            23076000000.0
+Total Expenses                                                59883000000.0
+Net Income From Continuing And Discontinued Operation         19442000000.0
+Normalized Income                                             19442000000.0
+Interest Income                                                 722000000.0
+Interest Expense                                                719000000.0
+Net Interest Income                                               3000000.0
+EBIT                                                          23785000000.0
+Reconciled Cost Of Revenue                                    47074000000.0
+Reconciled Depreciation                                        2805000000.0
+Net Income From Continuing Operation Net Minority Interest    19442000000.0
+Normalized EBITDA                                             26590000000.0
+Tax Rate For Calcs                                                    0.157
+Tax Effect Of Unusual Items                                             0.0
+Name: 2022-06-30 00:00:00, dtype: object
