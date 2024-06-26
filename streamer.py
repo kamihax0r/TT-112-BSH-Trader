@@ -1,78 +1,63 @@
-from flask import Flask, jsonify
-import connection_test
-import customer_info
-import positions
-import orders
-import streamer
+import websocket
+import json
+import threading
 
-app = Flask(__name__)
-app.config['CUSTOMER_INFO'] = {}
-app.config['ACCOUNT_NUMBERS'] = []
-app.config['POSITIONS'] = {}
-app.config['MARGIN_REQUIREMENTS'] = {}
-app.config['STREAMER'] = None
+class Streamer:
+    def __init__(self, session_token, account_numbers):
+        self.session_token = session_token
+        self.account_numbers = account_numbers
+        self.ws = None
+        self.listeners = []
 
-def initialize_app():
-    customer_data = customer_info.get_customer_info()
-    if 'error' not in customer_data:
-        app.config['CUSTOMER_INFO'] = customer_data
-        account_numbers = customer_info.get_acct_numbers()
-        if 'error' not in account_numbers:
-            app.config['ACCOUNT_NUMBERS'] = account_numbers
+    def on_message(self, ws, message):
+        data = json.loads(message)
+        for listener in self.listeners:
+            listener(data)
 
-            # Fetch and store positions for all accounts
-            positions_data = {}
-            for account_number in account_numbers:
-                positions_data[account_number] = positions.Positions().list_positions(account_number)
-            app.config['POSITIONS'] = positions_data
+    def on_error(self, ws, error):
+        print(error)
 
-            # Fetch and store margin requirements for all accounts
-            margin_requirements_data = {}
-            for account_number in account_numbers:
-                margin_requirements_data[account_number] = positions.Positions().get_account_margin_requirements(account_number)
-            app.config['MARGIN_REQUIREMENTS'] = margin_requirements_data
+    def on_close(self, ws, close_status_code, close_msg):
+        print("### closed ###")
 
-            # Initialize the streamer
-            session_token = customer_info.get_session_token()
-            app.config['STREAMER'] = streamer.initialize_streamer(session_token, account_numbers)
-        else:
-            print(f"Error retrieving account numbers: {account_numbers['error']}")
-    else:
-        print(f"Error retrieving customer info: {customer_data['error']}")
+    def on_open(self, ws):
+        def run(*args):
+            self.send_heartbeat()
+            self.subscribe_to_account_updates()
 
-@app.route('/', methods=['GET'])
-def home():
-    return 'Welcome to the Tastytrade API Flask app!'
+        threading.Thread(target=run).start()
 
-@app.route('/test-connection', methods=['GET'])
-def test_connection_route():
-    result = connection_test.test_connection()
-    if 'error' in result:
-        return jsonify(result), 400
-    return jsonify(result)
+    def send_heartbeat(self):
+        heartbeat_message = json.dumps({
+            "action": "heartbeat",
+            "auth-token": self.session_token,
+            "request-id": 1
+        })
+        self.ws.send(heartbeat_message)
 
-@app.route('/positions', methods=['GET'])
-def positions_route():
-    current_positions = app.config['POSITIONS']
-    if not current_positions:
-        return jsonify({'error': 'No positions found'}), 400
-    return jsonify({"positions": current_positions})
+    def subscribe_to_account_updates(self):
+        connect_message = json.dumps({
+            "action": "connect",
+            "value": self.account_numbers,
+            "auth-token": self.session_token,
+            "request-id": 2
+        })
+        self.ws.send(connect_message)
 
-@app.route('/balances', methods=['GET'])
-def balances_route():
-    if not app.config['ACCOUNT_NUMBERS']:
-        return jsonify({'error': 'No account numbers available'}), 400
+    def add_listener(self, listener):
+        self.listeners.append(listener)
 
-    all_balances = positions.Positions().get_all_balances(app.config['ACCOUNT_NUMBERS'])
-    return jsonify(all_balances)
+    def start(self):
+        websocket.enableTrace(True)
+        self.ws = websocket.WebSocketApp("wss://streamer.cert.tastyworks.com",
+                                         on_message=self.on_message,
+                                         on_error=self.on_error,
+                                         on_close=self.on_close)
+        self.ws.on_open = self.on_open
+        self.ws.run_forever()
 
-@app.route('/margin-requirements', methods=['GET'])
-def margin_requirements_route():
-    margin_requirements = app.config['MARGIN_REQUIREMENTS']
-    if not margin_requirements:
-        return jsonify({'error': 'No margin requirements found'}), 400
-    return jsonify(margin_requirements)
-
-if __name__ == '__main__':
-    initialize_app()
-    app.run(debug=True)
+def initialize_streamer(session_token, account_numbers):
+    streamer = Streamer(session_token, account_numbers)
+    streamer_thread = threading.Thread(target=streamer.start)
+    streamer_thread.start()
+    return streamer

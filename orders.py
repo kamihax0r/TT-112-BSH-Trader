@@ -1,9 +1,9 @@
 import requests
-from constants import BASE_URL, get_headers
+from constants import BASE_URL
 
 class Orders:
-    def __init__(self):
-        pass
+    def __init__(self, session_manager):
+        self.session_manager = session_manager
 
     def search_orders(self, account_number, start_date=None, end_date=None, underlying_symbol=None, status=None, sort='Desc', per_page=10, page_offset=0):
         url = f'{BASE_URL}/accounts/{account_number}/orders'
@@ -17,7 +17,8 @@ class Orders:
             'page-offset': page_offset
         }
         try:
-            response = requests.get(url, headers=get_headers(), params=params)
+            headers = self.session_manager.get_headers()
+            response = requests.get(url, headers=headers, params=params)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -26,11 +27,96 @@ class Orders:
     def get_todays_orders(self, account_number):
         url = f'{BASE_URL}/accounts/{account_number}/orders/live'
         try:
-            response = requests.get(url, headers=get_headers())
+            headers = self.session_manager.get_headers()
+            response = requests.get(url, headers=headers)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
             return {'error': str(e)}
+
+    def submit_order(self, account_number, order_data):
+        is_valid, message = self.validate_order(order_data)
+        if not is_valid:
+            return {'error': message}
+        url = f'{BASE_URL}/accounts/{account_number}/orders'
+        try:
+            headers = self.session_manager.get_headers()
+            response = requests.post(url, headers=headers, json=order_data)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {'error': str(e)}
+
+    def submit_order_dryrun(self, account_number, order_data):
+        is_valid, message = self.validate_order(order_data)
+        if not is_valid:
+            return {'error': message}
+        url = f'{BASE_URL}/accounts/{account_number}/orders/dry-run'
+        try:
+            headers = self.session_manager.get_headers()
+            response = requests.post(url, headers=headers, json=order_data)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {'error': str(e)}
+
+    def cancel_order(self, account_number, order_id):
+        url = f'{BASE_URL}/accounts/{account_number}/orders/{order_id}'
+        try:
+            headers = self.session_manager.get_headers()
+            response = requests.delete(url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {'error': str(e)}
+
+    def cancel_replace_order(self, account_number, order_id, new_order_data):
+        is_valid, message = self.validate_order(new_order_data)
+        if not is_valid:
+            return {'error': message}
+        url = f'{BASE_URL}/accounts/{account_number}/orders/{order_id}'
+        try:
+            headers = self.session_manager.get_headers()
+            response = requests.put(url, headers=headers, json=new_order_data)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {'error': str(e)}
+
+    def submit_complex_order(self, account_number, complex_order_data):
+        is_valid, message = self.validate_complex_order(complex_order_data)
+        if not is_valid:
+            return {'error': message}
+        url = f'{BASE_URL}/accounts/{account_number}/complex-orders'
+        try:
+            headers = self.session_manager.get_headers()
+            response = requests.post(url, headers=headers, json=complex_order_data)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {'error': str(e)}
+
+    def cancel_complex_order(self, account_number, complex_order_id):
+        url = f'{BASE_URL}/accounts/{account_number}/complex-orders/{complex_order_id}'
+        try:
+            headers = self.session_manager.get_headers()
+            response = requests.delete(url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {'error': str(e)}
+
+    def margin_dry_run(self, account_number, order_data):
+        url = f'{BASE_URL}/margin/accounts/{account_number}/dry-run'
+        try:
+            headers = self.session_manager.get_headers()
+            response = requests.post(url, headers=headers, json=order_data)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {'error': str(e)}
+
+    # Helper methods for creating and validating orders
 
     def create_leg(self, action, symbol, quantity, instrument_type):
         return {
@@ -73,26 +159,6 @@ class Orders:
             return False, "Notional Market orders require 'value' and 'value-effect'."
         return True, "Order is valid."
 
-    def example_orders(self):
-        example_market_order = self.create_order(
-            time_in_force="Day",
-            order_type="Market",
-            legs=[self.create_leg(action="Buy to Open", symbol="AAPL", quantity=1, instrument_type="Equity")]
-        )
-
-        example_limit_order = self.create_order(
-            time_in_force="Day",
-            order_type="Limit",
-            price=5.0,
-            price_effect="Debit",
-            legs=[self.create_leg(action="Buy to Open", symbol="AAPL", quantity=100, instrument_type="Equity")]
-        )
-
-        return {
-            "example_market_order": example_market_order,
-            "example_limit_order": example_limit_order
-        }
-
     def validate_complex_order(self, complex_order):
         required_fields = ["type", "orders"]
         for field in required_fields:
@@ -112,78 +178,3 @@ class Orders:
                 return False, f"Invalid order in complex orders: {message}"
 
         return True, "Complex order is valid."
-
-    def submit_order(self, account_number, order_data):
-        is_valid, message = self.validate_order(order_data)
-        if not is_valid:
-            return {'error': message}
-        url = f'{BASE_URL}/accounts/{account_number}/orders'
-        try:
-            response = requests.post(url, headers=get_headers(), json=order_data)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            return {'error': str(e)}
-
-    def submit_order_dryrun(self, account_number, order_data):
-        is_valid, message = self.validate_order(order_data)
-        if not is_valid:
-            return {'error': message}
-        url = f'{BASE_URL}/accounts/{account_number}/orders/dry-run'
-        try:
-            response = requests.post(url, headers=get_headers(), json=order_data)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            return {'error': str(e)}
-
-    def cancel_order(self, account_number, order_id):
-        url = f'{BASE_URL}/accounts/{account_number}/orders/{order_id}'
-        try:
-            response = requests.delete(url, headers=get_headers())
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            return {'error': str(e)}
-
-    def cancel_replace_order(self, account_number, order_id, new_order_data):
-        is_valid, message = self.validate_order(new_order_data)
-        if not is_valid:
-            return {'error': message}
-        url = f'{BASE_URL}/accounts/{account_number}/orders/{order_id}'
-        try:
-            response = requests.put(url, headers=get_headers(), json=new_order_data)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            return {'error': str(e)}
-
-    def submit_complex_order(self, account_number, complex_order_data):
-        is_valid, message = self.validate_complex_order(complex_order_data)
-        if not is_valid:
-            return {'error': message}
-        url = f'{BASE_URL}/accounts/{account_number}/complex-orders'
-        try:
-            response = requests.post(url, headers=get_headers(), json=complex_order_data)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            return {'error': str(e)}
-
-    def cancel_complex_order(self, account_number, complex_order_id):
-        url = f'{BASE_URL}/accounts/{account_number}/complex-orders/{complex_order_id}'
-        try:
-            response = requests.delete(url, headers=get_headers())
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            return {'error': str(e)}
-
-    def margin_dry_run(self, account_number, order_data):
-        url = f'{BASE_URL}/margin/accounts/{account_number}/dry-run'
-        try:
-            response = requests.post(url, headers=get_headers(), json=order_data)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            return {'error': str(e)}

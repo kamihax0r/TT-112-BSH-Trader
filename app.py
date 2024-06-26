@@ -1,44 +1,27 @@
 from flask import Flask, jsonify
-import connection_test
-import customer_info
-import positions
-import orders
-from streamer import initialize_streamer
+from session_manager import SessionManager
+from customer_info import CustomerInfo
+from orders import Orders
 
 app = Flask(__name__)
-app.config['CUSTOMER_INFO'] = {}
-app.config['ACCOUNT_NUMBERS'] = []
-app.config['POSITIONS'] = {}
-app.config['MARGIN_REQUIREMENTS'] = {}
+
+session_manager = SessionManager()
+orders_info = None
+customer_info = None
 
 def initialize_app():
-    customer_data = customer_info.get_customer_info()
-    if 'error' not in customer_data:
-        app.config['CUSTOMER_INFO'] = customer_data
-        account_numbers = customer_info.get_acctNumbers()
-        if 'error' not in account_numbers:
-            app.config['ACCOUNT_NUMBERS'] = account_numbers
+    global orders_info, customer_info
+    try:
+        session_manager.create_session()
+        headers = session_manager.get_headers()
+        #print(f"Headers in initialize_app: {headers}")
 
-            # Fetch and store positions for all accounts
-            positions_data = {}
-            for account_number in account_numbers:
-                positions_data[account_number] = positions.Positions().list_positions(account_number)
-            app.config['POSITIONS'] = positions_data
-
-            # Fetch and store margin requirements for all accounts
-            margin_requirements_data = {}
-            for account_number in account_numbers:
-                margin_requirements_data[account_number] = positions.Positions().get_account_margin_requirements(account_number)
-            app.config['MARGIN_REQUIREMENTS'] = margin_requirements_data
-
-            # Initialize the streamer
-            session_token = customer_info.get_session_token()  # Assuming you have a method to get session token
-            initialize_streamer(session_token, account_numbers)
-
-        else:
-            print(f"Error retrieving account numbers: {account_numbers['error']}")
-    else:
-        print(f"Error retrieving customer info: {customer_data['error']}")
+        # Initialize the customer info
+        customer_info = CustomerInfo(headers)
+        # Initialize orders
+        orders_info = Orders(session_manager)
+    except Exception as e:
+        print(f"Error during initialization: {e}")
 
 @app.route('/', methods=['GET'])
 def home():
@@ -46,32 +29,22 @@ def home():
 
 @app.route('/test-connection', methods=['GET'])
 def test_connection_route():
-    result = connection_test.test_connection()
+    result = session_manager.test_connection()
     if 'error' in result:
         return jsonify(result), 400
     return jsonify(result)
 
-@app.route('/positions', methods=['GET'])
-def positions_route():
-    current_positions = app.config['POSITIONS']
-    if not current_positions:
-        return jsonify({'error': 'No positions found'}), 400
-    return jsonify({"positions": current_positions})
+@app.route('/account-numbers', methods=['GET'])
+def account_numbers_route():
+    global customer_info
+    if not customer_info:
+        return jsonify({'error': 'Customer info instance not initialized'}), 500
 
-@app.route('/balances', methods=['GET'])
-def balances_route():
-    if not app.config['ACCOUNT_NUMBERS']:
-        return jsonify({'error': 'No account numbers available'}), 400
-
-    all_balances = positions.Positions().get_all_balances(app.config['ACCOUNT_NUMBERS'])
-    return jsonify(all_balances)
-
-@app.route('/margin-requirements', methods=['GET'])
-def margin_requirements_route():
-    margin_requirements = app.config['MARGIN_REQUIREMENTS']
-    if not margin_requirements:
-        return jsonify({'error': 'No margin requirements found'}), 400
-    return jsonify(margin_requirements)
+    try:
+        account_numbers = customer_info.get_acct_numbers()
+        return jsonify({'account_numbers': account_numbers})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     initialize_app()
