@@ -1,7 +1,7 @@
 import os
 
-LOGIN = 'kamihax0rsandbox'
-PASSWORD = '$u@Dk968W$aQbe6Q'
+LOGIN = 'login'
+PASSWORD = 'password'
 BASE_URL = 'https://api.cert.tastyworks.com'
 STREAMER_URL = 'wss://streamer.cert.tastyworks.com'
 
