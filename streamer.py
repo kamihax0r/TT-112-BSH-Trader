@@ -1,63 +1,54 @@
 import websocket
 import json
-import threading
+from constants import STREAMER_URL
 
 class Streamer:
-    def __init__(self, session_token, account_numbers):
-        self.session_token = session_token
+    def __init__(self, session_manager, account_numbers):
+        self.session_manager = session_manager
         self.account_numbers = account_numbers
         self.ws = None
-        self.listeners = []
 
     def on_message(self, ws, message):
-        data = json.loads(message)
-        for listener in self.listeners:
-            listener(data)
+        try:
+            data = json.loads(message)
+            print(f"Received message: {data}")
+
+            # Handle different types of messages
+            if 'type' in data and data['type'] == 'Greeks':
+                self.handle_greeks_data(data['data'])
+        except Exception as e:
+            print(f"Error processing message: {e}")
 
     def on_error(self, ws, error):
-        print(error)
+        print(f"WebSocket error: {error}")
 
     def on_close(self, ws, close_status_code, close_msg):
-        print("### closed ###")
+        print("WebSocket connection closed")
 
     def on_open(self, ws):
-        def run(*args):
-            self.send_heartbeat()
-            self.subscribe_to_account_updates()
-
-        threading.Thread(target=run).start()
-
-    def send_heartbeat(self):
-        heartbeat_message = json.dumps({
-            "action": "heartbeat",
-            "auth-token": self.session_token,
-            "request-id": 1
-        })
-        self.ws.send(heartbeat_message)
-
-    def subscribe_to_account_updates(self):
-        connect_message = json.dumps({
-            "action": "connect",
-            "value": self.account_numbers,
-            "auth-token": self.session_token,
-            "request-id": 2
-        })
-        self.ws.send(connect_message)
-
-    def add_listener(self, listener):
-        self.listeners.append(listener)
+        print("WebSocket connection opened")
+        self.subscribe_to_account_updates()
 
     def start(self):
-        websocket.enableTrace(True)
-        self.ws = websocket.WebSocketApp("wss://streamer.cert.tastyworks.com",
-                                         on_message=self.on_message,
-                                         on_error=self.on_error,
-                                         on_close=self.on_close)
-        self.ws.on_open = self.on_open
+        self.ws = websocket.WebSocketApp(
+            STREAMER_URL,
+            header=self.session_manager.get_headers(),
+            on_message=self.on_message,
+            on_error=self.on_error,
+            on_close=self.on_close,
+            on_open=self.on_open
+        )
         self.ws.run_forever()
 
-def initialize_streamer(session_token, account_numbers):
-    streamer = Streamer(session_token, account_numbers)
-    streamer_thread = threading.Thread(target=streamer.start)
-    streamer_thread.start()
-    return streamer
+    def subscribe_to_account_updates(self):
+        subscribe_message = {
+            "action": "connect",
+            "value": self.account_numbers,
+            "auth-token": self.session_manager.get_session_token()
+        }
+        self.ws.send(json.dumps(subscribe_message))
+        print(f"Subscribed to account updates for: {self.account_numbers}")
+
+    def handle_greeks_data(self, data):
+        # Implement logic to handle Greeks data
+        print(f"Greeks data: {data}")

@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 from session_manager import SessionManager
 from customer_info import CustomerInfo
 from orders import Orders
+from streamer import Streamer
 from account import Account
 
 app = Flask(__name__)
@@ -11,9 +12,10 @@ orders_info = None
 customer_info = None
 account_positions = {}
 account_balances = {}
+streamer = None
 
 def initialize_app():
-    global orders_info, customer_info, account_positions, account_balances
+    global orders_info, customer_info, account_positions, account_balances, streamer
     try:
         session_manager.create_session()
         headers = session_manager.get_headers()
@@ -34,6 +36,10 @@ def initialize_app():
             balance = account.get_balance()
             account_positions[account_number] = positions
             account_balances[account_number] = balance
+
+        # Initialize and start the streamer
+        streamer = Streamer(session_manager, account_numbers)
+        streamer.start()
 
     except Exception as e:
         print(f"Error during initialization: {e}")
