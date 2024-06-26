@@ -1,8 +1,8 @@
 from flask import Flask, jsonify
+import customer_info
 import connection_test
 import positions
-import balance
-import customer_info
+import account_info
 import session_manager
 
 app = Flask(__name__)
@@ -12,6 +12,7 @@ app.config['ACCOUNT_NUMBERS'] = []
 def initialize_app():
     # Create a session
     session_manager.create_session()
+
     # Fetch customer info and account numbers
     customer_data = customer_info.get_customer_info()
     if 'error' not in customer_data:
@@ -48,8 +49,15 @@ def balances_route():
     if not app.config['ACCOUNT_NUMBERS']:
         return jsonify({'error': 'No account numbers available'}), 400
     
-    all_balances = balance.get_all_balances(app.config['ACCOUNT_NUMBERS'])
+    all_balances = account_info.get_all_balances(app.config['ACCOUNT_NUMBERS'])
     return jsonify(all_balances)
+
+@app.route('/account/<account_number>', methods=['GET'])
+def account_info_route(account_number):
+    account_info_data = account_info.get_account_info(account_number)
+    if 'error' in account_info_data:
+        return jsonify(account_info_data), 400
+    return jsonify(account_info_data)
 
 if __name__ == '__main__':
     initialize_app()
