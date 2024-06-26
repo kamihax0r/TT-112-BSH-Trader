@@ -1,0 +1,60 @@
+from flask import Flask, jsonify
+import connection_test
+import customer_info
+import positions
+import orders
+from session_manager import SessionManager
+
+app = Flask(__name__)
+app.config['CUSTOMER_INFO'] = {}
+app.config['ACCOUNT_NUMBERS'] = []
+app.config['POSITIONS'] = {}
+app.config['MARGIN_REQUIREMENTS'] = {}
+
+session_manager = SessionManager()
+
+def initialize_app():
+    try:a
+        # Create session
+        session_manager.create_session()
+        headers = session_manager.get_headers()
+
+        # Fetch customer info
+        customer_info_instance = customer_info.CustomerInfo(session_manager)
+        customer_data = customer_info_instance.get_customer_info()
+        app.config['CUSTOMER_INFO'] = customer_data
+
+        # Fetch account numbers
+        account_numbers = customer_info_instance.get_acct_numbers()
+        app.config['ACCOUNT_NUMBERS'] = account_numbers
+
+        # Fetch positions for all accounts
+        positions_data = {}
+        for account_number in account_numbers:
+            positions_instance = positions.Positions(headers)
+            positions_data[account_number] = positions_instance.list_positions(account_number)
+        app.config['POSITIONS'] = positions_data
+
+        # Fetch margin requirements for all accounts
+        margin_requirements_data = {}
+        for account_number in account_numbers:
+            positions_instance = positions.Positions(headers)
+            margin_requirements_data[account_number] = positions_instance.get_account_margin_requirements(account_number)
+        app.config['MARGIN_REQUIREMENTS'] = margin_requirements_data
+    except Exception as e:
+        print(f"Error during initialization: {e}")
+
+@app.route('/', methods=['GET'])
+def home():
+    return 'Welcome to the Tastytrade API Flask app!'
+
+@app.route('/test-connection', methods=['GET'])
+def test_connection_route():
+    result = connection_test.test_connection()
+    if 'error' in result:
+        return jsonify(result), 400
+    return jsonify(result)
+
+if __name__ == '__main__':
+    initialize_app()
+    app.run(debug=True)
