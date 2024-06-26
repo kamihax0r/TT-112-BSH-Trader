@@ -20,3 +20,6 @@ class CustomerInfo:
         response.raise_for_status()
         accounts_data = response.json()['data']['items']
         return [account['account']['account-number'] for account in accounts_data]
+
+    def get_session_token(self):
+        return self.session.get_session_token()

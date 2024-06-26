@@ -3,19 +3,20 @@ import connection_test
 import customer_info
 import positions
 import orders
-from streamer import initialize_streamer
+import streamer
 
 app = Flask(__name__)
 app.config['CUSTOMER_INFO'] = {}
 app.config['ACCOUNT_NUMBERS'] = []
 app.config['POSITIONS'] = {}
 app.config['MARGIN_REQUIREMENTS'] = {}
+app.config['STREAMER'] = None
 
 def initialize_app():
     customer_data = customer_info.get_customer_info()
     if 'error' not in customer_data:
         app.config['CUSTOMER_INFO'] = customer_data
-        account_numbers = customer_info.get_acctNumbers()
+        account_numbers = customer_info.get_acct_numbers()
         if 'error' not in account_numbers:
             app.config['ACCOUNT_NUMBERS'] = account_numbers
 
@@ -32,9 +33,8 @@ def initialize_app():
             app.config['MARGIN_REQUIREMENTS'] = margin_requirements_data
 
             # Initialize the streamer
-            session_token = customer_info.get_session_token()  # Assuming you have a method to get session token
-            initialize_streamer(session_token, account_numbers)
-
+            session_token = customer_info.get_session_token()
+            app.config['STREAMER'] = streamer.initialize_streamer(session_token, account_numbers)
         else:
             print(f"Error retrieving account numbers: {account_numbers['error']}")
     else:
