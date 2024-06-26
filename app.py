@@ -1,26 +1,35 @@
 from flask import Flask, jsonify
-import customer_info
 import connection_test
+import customer_info
 import positions
-import account_info
-import session_manager
+import orders
 
 app = Flask(__name__)
 app.config['CUSTOMER_INFO'] = {}
 app.config['ACCOUNT_NUMBERS'] = []
+app.config['POSITIONS'] = {}
+app.config['MARGIN_REQUIREMENTS'] = {}
 
 def initialize_app():
-    # Create a session
-    session_manager.create_session()
-
-    # Fetch customer info and account numbers
     customer_data = customer_info.get_customer_info()
     if 'error' not in customer_data:
         app.config['CUSTOMER_INFO'] = customer_data
         account_numbers = customer_info.get_acctNumbers()
         if 'error' not in account_numbers:
             app.config['ACCOUNT_NUMBERS'] = account_numbers
-            print(f"Account Numbers: {account_numbers}")  # Debugging line
+
+            # Fetch and store positions for all accounts
+            positions_data = {}
+            for account_number in account_numbers:
+                positions_data[account_number] = positions.Positions().list_positions(account_number)
+            app.config['POSITIONS'] = positions_data
+
+            # Fetch and store margin requirements for all accounts
+            margin_requirements_data = {}
+            for account_number in account_numbers:
+                margin_requirements_data[account_number] = positions.Positions().get_account_margin_requirements(account_number)
+            app.config['MARGIN_REQUIREMENTS'] = margin_requirements_data
+
         else:
             print(f"Error retrieving account numbers: {account_numbers['error']}")
     else:
@@ -39,25 +48,25 @@ def test_connection_route():
 
 @app.route('/positions', methods=['GET'])
 def positions_route():
-    current_positions = positions.get_current_positions()
-    if 'error' in current_positions:
-        return jsonify(current_positions), 400
+    current_positions = app.config['POSITIONS']
+    if not current_positions:
+        return jsonify({'error': 'No positions found'}), 400
     return jsonify({"positions": current_positions})
 
 @app.route('/balances', methods=['GET'])
 def balances_route():
     if not app.config['ACCOUNT_NUMBERS']:
         return jsonify({'error': 'No account numbers available'}), 400
-    
-    all_balances = account_info.get_all_balances(app.config['ACCOUNT_NUMBERS'])
+
+    all_balances = positions.Positions().get_all_balances(app.config['ACCOUNT_NUMBERS'])
     return jsonify(all_balances)
 
-@app.route('/account/<account_number>', methods=['GET'])
-def account_info_route(account_number):
-    account_info_data = account_info.get_account_info(account_number)
-    if 'error' in account_info_data:
-        return jsonify(account_info_data), 400
-    return jsonify(account_info_data)
+@app.route('/margin-requirements', methods=['GET'])
+def margin_requirements_route():
+    margin_requirements = app.config['MARGIN_REQUIREMENTS']
+    if not margin_requirements:
+        return jsonify({'error': 'No margin requirements found'}), 400
+    return jsonify(margin_requirements)
 
 if __name__ == '__main__':
     initialize_app()
