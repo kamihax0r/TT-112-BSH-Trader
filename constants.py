@@ -10,9 +10,10 @@ if ENVIRONMENT == 'testing':
     LOGIN = 'kamihax0rsandbox'
     PASSWORD = '$u@Dk968W$aQbe6Q'
     BASE_URL = 'https://api.cert.tastyworks.com'
-    STREAMER_URL = 'streamer.cert.tastyworks.com'
+    STREAMER_URL = 'wss://streamer.cert.tastyworks.com'
 else:
     #Production Account Credentials
     BASE_URL = 'https://api.tastyworks.com'
     LOGIN = 'prod_login'
     PASSWORD = 'prod_password'
+    STREAMER_URL = 'wss://streamer.tastyworks.com'
