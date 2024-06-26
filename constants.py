@@ -1,7 +1,7 @@
 import os
 
-LOGIN = 'login'
-PASSWORD = 'password'
+LOGIN = 'testy'
+PASSWORD = 'testy'
 BASE_URL = 'https://api.cert.tastyworks.com'
 STREAMER_URL = 'wss://streamer.cert.tastyworks.com'
 
