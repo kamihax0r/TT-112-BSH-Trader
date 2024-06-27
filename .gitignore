@@ -1,1 +1,14 @@
+# Ignore Python compiled files
+*.pyc
+__pycache__/
+
+# Ignore virtual environment
+.venv/
+env/
+
+# Ignore constants file
 constants.py
+
+# Ignore other sensitive files
+*.secret
+*.env
