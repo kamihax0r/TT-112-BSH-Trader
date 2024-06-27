@@ -1,5 +1,5 @@
 import requests
-from constants import BASE_URL 
+from constants import BASE_URL
 from session_manager import SessionManager
 
 class Instruments:
