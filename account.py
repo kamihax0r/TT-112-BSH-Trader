@@ -3,7 +3,6 @@ from constants import BASE_URL
 
 class Account:
     def __init__(self, account_number, session_manager):
-    def __init__(self, account_number, session_manager):
         self.account_number = account_number
         self.session_manager = session_manager
         self.session_manager = session_manager
