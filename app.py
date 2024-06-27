@@ -5,6 +5,7 @@ from orders import Orders
 from streamer import Streamer
 from account import Account
 from instruments import Instruments
+from greeks_review import GreeksReview
 
 app = Flask(__name__)
 
@@ -16,9 +17,10 @@ account_balances = {}
 accounts = []  # Initialize the global accounts list
 streamer = None
 instruments = None
+greeks_review = None
 
 def initialize_app():
-    global orders_info, customer_info, account_positions, account_balances, accounts, streamer, instruments
+    global orders_info, customer_info, account_positions, account_balances, accounts, streamer, instruments, greeks_review
     try:
         session_manager.create_session()
         headers = session_manager.get_headers()
@@ -40,6 +42,9 @@ def initialize_app():
             account_positions[account_number] = positions
             account_balances[account_number] = balance
             accounts.append(account)
+
+        # Initialize Greeks review
+        greeks_review = GreeksReview(accounts)
 
         # Initialize and start the streamer
         streamer = Streamer(session_manager, account_numbers)
@@ -76,17 +81,29 @@ def account_numbers_route():
 
 @app.route('/positions', methods=['GET'])
 def positions_route():
-    global account_positions
-    if not account_positions:
-        return jsonify({'error': 'No positions found'}), 500
-    return jsonify({'positions': account_positions})
+    global accounts
+    positions_data = {}
+    if not accounts:
+        return jsonify({'error': 'No accounts found'}), 500
+    try:
+        for account in accounts:
+            positions_data[account.account_number] = account.get_positions()
+        return jsonify({'positions': positions_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/balances', methods=['GET'])
 def balances_route():
-    global account_balances
-    if not account_balances:
-        return jsonify({'error': 'No balances found'}), 500
-    return jsonify({'balances': account_balances})
+    global accounts
+    balances_data = {}
+    if not accounts:
+        return jsonify({'error': 'No accounts found'}), 500
+    try:
+        for account in accounts:
+            balances_data[account.account_number] = account.get_balance()
+        return jsonify({'balances': balances_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/account-greeks/<account_number>', methods=['GET'])
 def account_greeks_route(account_number):
@@ -102,7 +119,7 @@ def account_greeks_route(account_number):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/account-greeks', methods=['GET'])
-def all_account_greeks_route():
+def all_accounts_greeks_route():
     global accounts
     if not accounts:
         return jsonify({'error': 'Accounts not initialized'}), 500
@@ -115,18 +132,17 @@ def all_account_greeks_route():
         return jsonify({'account_greeks': account_greeks})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
-# Order-related endpoints
+
 @app.route('/orders/<account_number>', methods=['GET'])
 def get_orders_route(account_number):
     global orders_info
-    start_date = request.args.get('start-date')
-    end_date = request.args.get('end-date')
-    underlying_symbol = request.args.get('underlying-symbol')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    underlying_symbol = request.args.get('underlying_symbol')
     status = request.args.get('status')
     sort = request.args.get('sort', 'Desc')
-    per_page = request.args.get('per-page', 10)
-    page_offset = request.args.get('page-offset', 0)
+    per_page = request.args.get('per_page', 10)
+    page_offset = request.args.get('page_offset', 0)
 
     try:
         orders = orders_info.search_orders(account_number, start_date, end_date, underlying_symbol, status, sort, per_page, page_offset)
@@ -161,7 +177,31 @@ def get_all_orders_route():
         return jsonify({'all_orders': all_orders})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
+
+@app.route('/recommendations', methods=['GET'])
+def recommendations_route():
+    global trading_logic
+    if not trading_logic:
+        return jsonify({'error': 'Trading logic not initialized'}), 500
+
+    try:
+        recommendations = trading_logic.analyze_and_trade()
+        return jsonify({'recommendations': recommendations})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/review-greeks', methods=['GET'])
+def review_greeks_route():
+    global greeks_review
+    if not greeks_review:
+        return jsonify({'error': 'Greeks review not initialized'}), 500
+
+    try:
+        review_results = greeks_review.review_greeks()
+        return jsonify({'greeks_review': review_results})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     initialize_app()
     app.run(debug=True)
