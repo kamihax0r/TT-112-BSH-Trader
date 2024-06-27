@@ -35,8 +35,10 @@ def initialize_app():
         # Fetch positions and balances for all accounts and store them
         for account_number in account_numbers:
             account = Account(account_number, session_manager)
-            account.get_positions()
-            account.get_balance()
+            positions = account.get_positions()
+            balance = account.get_balance()
+            account_positions[account_number] = positions
+            account_balances[account_number] = balance
             accounts.append(account)
 
         # Initialize and start the streamer
