@@ -1,5 +1,5 @@
 import requests
-from constants import BASE_URL
+from constants import BASE_URL 
 
 class Account:
     def __init__(self, account_number, session_manager):
