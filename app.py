@@ -14,6 +14,7 @@ customer_info = None
 account_positions = {}
 account_balances = {}
 accounts = []  # Initialize the global accounts list
+accounts = []  # Initialize the global accounts list
 streamer = None
 instruments = None
 
@@ -34,6 +35,10 @@ def initialize_app():
 
         # Fetch positions and balances for all accounts and store them
         for account_number in account_numbers:
+            account = Account(account_number, session_manager)
+            account.get_positions()
+            account.get_balance()
+            accounts.append(account)
             account = Account(account_number, session_manager)
             account.get_positions()
             account.get_balance()
@@ -85,6 +90,35 @@ def balances_route():
     if not account_balances:
         return jsonify({'error': 'No balances found'}), 500
     return jsonify({'balances': account_balances})
+
+@app.route('/account-greeks/<account_number>', methods=['GET'])
+def account_greeks_route(account_number):
+    global accounts
+    account = next((acc for acc in accounts if acc.account_number == account_number), None)
+    if not account:
+        return jsonify({'error': f'Account {account_number} not found'}), 404
+
+    try:
+        greeks = account.get_account_greeks()
+        return jsonify({'account_greeks': greeks})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/account-greeks', methods=['GET'])
+def all_account_greeks_route():
+    global accounts
+    if not accounts:
+        return jsonify({'error': 'Accounts not initialized'}), 500
+
+    try:
+        account_greeks = {}
+        for account in accounts:
+            greeks = account.get_account_greeks()
+            account_greeks[account.account_number] = greeks
+        return jsonify({'account_greeks': account_greeks})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
 
 @app.route('/account-greeks/<account_number>', methods=['GET'])
 def account_greeks_route(account_number):
