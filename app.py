@@ -4,6 +4,7 @@ from customer_info import CustomerInfo
 from orders import Orders
 from streamer import Streamer
 from account import Account
+from instruments import Instruments
 
 app = Flask(__name__)
 
@@ -14,9 +15,10 @@ account_positions = {}
 account_balances = {}
 accounts = []  # Initialize the global accounts list
 streamer = None
+instruments = None
 
 def initialize_app():
-    global orders_info, customer_info, account_positions, account_balances, accounts, streamer
+    global orders_info, customer_info, account_positions, account_balances, accounts, streamer, instruments
     try:
         session_manager.create_session()
         headers = session_manager.get_headers()
@@ -40,6 +42,9 @@ def initialize_app():
         # Initialize and start the streamer
         streamer = Streamer(session_manager, account_numbers)
         streamer.start()
+        
+        # Initialize an instance of instruments to call functions when needed
+        instruments = Instruments(session_manager)
 
     except Exception as e:
         print(f"Error during initialization: {e}")

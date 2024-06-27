@@ -3,8 +3,8 @@ from constants import BASE_URL
 from session_manager import SessionManager
 
 class Instruments:
-    def __init__(self):
-        self.session = SessionManager()
+    def __init__(self, session_manager: SessionManager):
+        self.session = session_manager
 
     # Equities
     def list_equities(self, symbols=None, lendability=None, is_index=None, is_etf=None):
