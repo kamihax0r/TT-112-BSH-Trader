@@ -12,6 +12,8 @@ class SessionManager:
             'password': PASSWORD
         }
         response = requests.post(url, json=data)
+        if response.status_code == 401:
+            raise Exception(f"Authentication failed: {response.json().get('error', 'Unknown error')}")
         response.raise_for_status()
         self.session_token = response.json()['data']['session-token']
 
@@ -23,16 +25,18 @@ class SessionManager:
     def get_headers(self):
         session_token = self.get_session_token()
         return {
-            'Authorization': session_token,
+            'Authorization': f'{session_token}',
             'Content-Type': 'application/json'
         }
 
     def test_connection(self):
         headers = self.get_headers()
-        url = f'{BASE_URL}/customers/me'
+        url = f'{BASE_URL}/sessions/validate'
+        response = requests.get(url, headers=headers)
+        if response.status_code == 401:
+            return {'error': '401 Unauthorized. Invalid session token.'}
         try:
-            response = requests.get(url, headers=headers)
             response.raise_for_status()
-            return {"status": "success", "data": response.json()}
-        except requests.exceptions.RequestException as e:
-            return {"error": str(e)}
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            return {'error': str(e)}
