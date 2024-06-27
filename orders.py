@@ -1,8 +1,9 @@
 import requests
 from constants import BASE_URL
+from session_manager import SessionManager
 
 class Orders:
-    def __init__(self, session_manager):
+    def __init__(self, session_manager: SessionManager):
         self.session_manager = session_manager
 
     def search_orders(self, account_number, start_date=None, end_date=None, underlying_symbol=None, status=None, sort='Desc', per_page=10, page_offset=0):

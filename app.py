@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from session_manager import SessionManager
 from customer_info import CustomerInfo
 from orders import Orders
@@ -111,6 +111,52 @@ def all_account_greeks_route():
             greeks = account.get_account_greeks()
             account_greeks[account.account_number] = greeks
         return jsonify({'account_greeks': account_greeks})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+# Order-related endpoints
+@app.route('/orders/<account_number>', methods=['GET'])
+def get_orders_route(account_number):
+    global orders_info
+    start_date = request.args.get('start-date')
+    end_date = request.args.get('end-date')
+    underlying_symbol = request.args.get('underlying-symbol')
+    status = request.args.get('status')
+    sort = request.args.get('sort', 'Desc')
+    per_page = request.args.get('per-page', 10)
+    page_offset = request.args.get('page-offset', 0)
+
+    try:
+        orders = orders_info.search_orders(account_number, start_date, end_date, underlying_symbol, status, sort, per_page, page_offset)
+        return jsonify({'orders': orders})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/orders/<account_number>/<order_id>', methods=['GET'])
+def get_order_by_id_route(account_number, order_id):
+    global orders_info
+    try:
+        orders = orders_info.search_orders(account_number)
+        order = next((order for order in orders['data']['items'] if order['order-id'] == order_id), None)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+        return jsonify({'order': order})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/orders/all', methods=['GET'])
+def get_all_orders_route():
+    global customer_info, orders_info
+    if not customer_info:
+        return jsonify({'error': 'Customer info instance not initialized'}), 500
+
+    try:
+        account_numbers = customer_info.get_acct_numbers()
+        all_orders = {}
+        for account_number in account_numbers:
+            orders = orders_info.search_orders(account_number)
+            all_orders[account_number] = orders
+        return jsonify({'all_orders': all_orders})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
