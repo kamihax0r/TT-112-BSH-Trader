@@ -201,6 +201,33 @@ def review_greeks_route():
         return jsonify({'greeks_review': review_results})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/find-and-place-ES-LT112', methods=['POST'])
+def find_and_place_ES_LT112():
+    global trade_finder, orders_info
+    if not trade_finder or not orders_info:
+        return jsonify({'error': 'TradeFinder or Orders instance not initialized'}), 500
+
+    try:
+        es_trade = trade_finder.find_ES_LT112()
+        if not es_trade:
+            return jsonify({'error': 'No suitable ES LT112 trade found'}), 400
+
+        account_numbers = customer_info.get_acct_numbers()
+        if not account_numbers:
+            return jsonify({'error': 'No accounts found for the user'}), 400
+
+        order_ids = []
+        for trade in [es_trade['trade1'], es_trade['trade2']]:
+            for account_number in account_numbers:
+                response = orders_info.submit_order(account_number, trade)
+                if 'error' in response:
+                    return jsonify(response), 400
+                order_ids.append(response['data']['order-id'])
+
+        return jsonify({'order_ids': order_ids})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     initialize_app()

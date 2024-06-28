@@ -1,5 +1,5 @@
 import requests
-from constants import BASE_URL
+from constants import *
 from session_manager import SessionManager
 from instruments import Instruments
 from datetime import datetime
@@ -16,8 +16,8 @@ class TradeFinder:
     def find_option_with_price(self, options, target_price):
         closest_option = min(options, key=lambda x: abs(x['ask'] - target_price))
         return closest_option
-    
-    def find_112(self, symbol):
+
+    def find_112(self, symbol, DTE=120):
         try:
             if symbol.startswith("/"):
                 option_chains = self.instruments.list_detailed_futures_option_chains(symbol)
@@ -25,12 +25,12 @@ class TradeFinder:
                 option_chains = self.instruments.list_detailed_option_chains(symbol)
                 
             expiration_dates = option_chains['data']['items']
-            expiration_dates.sort(key=lambda x: abs((datetime.strptime(x['expiration-date'], '%Y-%m-%d') - datetime.now()).days - 120))
+            expiration_dates.sort(key=lambda x: abs((datetime.strptime(x['expiration-date'], '%Y-%m-%d') - datetime.now()).days - DTE))
 
             nearest_expiration = None
             for exp_date in expiration_dates:
                 options = next((chain for chain in option_chains['data']['items'] if chain['expiration-date'] == exp_date['expiration-date']), None)
-                long_put = self.find_option_with_price(options['options'], delta_target=0.25, option_type='put')
+                long_put = self.find_option_with_delta(options['options'], target_delta=0.25)
 
                 if long_put:
                     short_put_strike = long_put['strike-price'] - 50
@@ -43,9 +43,9 @@ class TradeFinder:
                 raise ValueError("No suitable expiration found for the 112 trade")
 
             options = next((chain for chain in option_chains['data']['items'] if chain['expiration-date'] == nearest_expiration['expiration-date']), None)
-            long_put = self.find_option_with_price(options['options'], delta_target=0.25, option_type='put')
+            long_put = self.find_option_with_delta(options['options'], target_delta=0.25)
             short_put = next((opt for opt in options['options'] if opt['strike-price'] == long_put['strike-price'] - 50 and opt['type'] == 'put'), None)
-            short_put_2 = self.find_option_with_price(options['options'], delta_target=0.05, option_type='put', quantity=2)
+            short_put_2 = self.find_option_with_delta(options['options'], target_delta=0.05)
 
             trade1 = {
                 'order_type': 'Complex',
@@ -77,23 +77,40 @@ class TradeFinder:
             print(f"Error in finding 112 trade: {e}")
             return None
 
-    def find_ES_112(self):
-        es_trade = self.find_112("/ES")
-        
-        # Price check logic
-        if es_trade:
-            total_credit = es_trade['trade2']['price'] - es_trade['trade1']['price']
-            if 20 <= total_credit <= 25:
-                return es_trade
-            else:
-                print("The trade does not meet the credit requirements")
-                return None
-        else:
-            print("Unable to find a suitable 112 trade")
+    def find_ES_LT112(self):
+        min_credit = ES_LT112_MIN_CREDIT
+        max_credit = ES_LT112_MAX_CREDIT
+        try:
+            for dte in range(ES_LT112_MIN_DTE, ES_LT112_MAX_DTE + 1):
+                es_trade = self.find_112("/ES", DTE=dte)
+                
+                if es_trade:
+                    total_credit = es_trade['trade2']['price'] - es_trade['trade1']['price']
+                    if min_credit <= total_credit <= max_credit:
+                        return es_trade
+
+            print("No suitable 112 trade found within the desired credit range and DTE")
+            return None
+
+        except Exception as e:
+            print(f"Error in finding standard 112 trade: {e}")
             return None
         
-        
-# Example usage:
-# session_manager = SessionManager()
-# trade_finder = TradeFinder(session_manager)
-# trade_finder.find_ES_112()
+    def find_ES_standard_112(self):
+        min_credit = ES_112_MIN_CREDIT
+        max_credit = ES_112_MAX_CREDIT
+        try:
+            for dte in range(ES_112_MIN_DTE, ES_112_MAX_DTE + 1):
+                es_trade = self.find_112("/ES", DTE=dte)
+                
+                if es_trade:
+                    total_credit = es_trade['trade2']['price'] - es_trade['trade1']['price']
+                    if min_credit <= total_credit <= max_credit:
+                        return es_trade
+
+            print("No suitable 112 trade found within the desired credit range and DTE")
+            return None
+
+        except Exception as e:
+            print(f"Error in finding standard 112 trade: {e}")
+            return None
