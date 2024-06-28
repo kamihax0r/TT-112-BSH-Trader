@@ -6,6 +6,7 @@ from streamer import Streamer
 from account import Account
 from instruments import Instruments
 from greeks_review import GreeksReview
+from trade_finder import TradeFinder
 
 app = Flask(__name__)
 
@@ -18,9 +19,10 @@ accounts = []  # Initialize the global accounts list
 streamer = None
 instruments = None
 greeks_review = None
+trade_finder = None
 
 def initialize_app():
-    global orders_info, customer_info, account_positions, account_balances, accounts, streamer, instruments, greeks_review
+    global orders_info, customer_info, account_positions, account_balances, accounts, streamer, instruments, greeks_review, trade_finder
     try:
         session_manager.create_session()
         headers = session_manager.get_headers()
@@ -52,6 +54,9 @@ def initialize_app():
         
         # Initialize an instance of instruments to call functions when needed
         instruments = Instruments(session_manager)
+        
+        # Initialize the trade finder
+        trade_finder = TradeFinder(session_manager)
 
     except Exception as e:
         print(f"Error during initialization: {e}")
