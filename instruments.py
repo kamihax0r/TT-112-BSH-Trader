@@ -102,11 +102,10 @@ class Instruments:
 
     # Future Options
     def list_nested_futures_option_chains(self, symbol, expiration_date):
-        url = f'{BASE_URL}/instruments/nested-futures-option-chains'
+        url = f'{BASE_URL}/futures-option-chains/{symbol}/nested'
         headers = {'Authorization': self.session_manager.get_session_token()}
         print(f"Request Headers: {headers}")
         params = {
-            'symbol': symbol,
             'expiration-date': expiration_date
         }
         response = requests.get(url, headers=headers, params=params)
