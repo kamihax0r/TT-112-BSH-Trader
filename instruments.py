@@ -101,11 +101,18 @@ class Instruments:
         return response.json()
 
     # Future Options
-    def list_nested_futures_option_chains(self, product_code):
-        url = f'{BASE_URL}/futures-option-chains/{product_code}/nested'
-        response = requests.get(url, headers=self.session_manager.get_headers())
+    def list_nested_futures_option_chains(self, symbol, expiration_date):
+        url = f'{BASE_URL}/instruments/nested-futures-option-chains'
+        headers = {'Authorization': self.session_manager.get_session_token()}
+        print(f"Request Headers: {headers}")
+        params = {
+            'symbol': symbol,
+            'expiration-date': expiration_date
+        }
+        response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         return response.json()
+
 
     def list_detailed_futures_option_chains(self, product_code):
         url = f'{BASE_URL}/futures-option-chains/{product_code}'
@@ -113,16 +120,21 @@ class Instruments:
         response.raise_for_status()
         return response.json()
 
-    def list_future_options(self, symbols=None, option_root_symbol=None, expiration_date=None, option_type=None, strike_price=None):
+    def list_future_options(self, option_root_symbol=None, expiration_date=None, option_type=None, strike_price=None):
         url = f'{BASE_URL}/instruments/future-options'
-        params = {
-            'symbol[]': symbols,
-            'option-root-symbol': option_root_symbol,
-            'expiration-date': expiration_date,
-            'option-type': option_type,
-            'strike-price': strike_price
+        params = {}
+
+        if option_root_symbol:
+            params['option-root-symbol'] = option_root_symbol
+        if expiration_date and option_type and strike_price is not None:
+            params['expiration-date'] = expiration_date
+            params['option-type'] = option_type
+            params['strike-price'] = strike_price
+
+        headers = {
+            'Authorization': f'Bearer {self.session_manager.get_session_token()}'
         }
-        response = requests.get(url, headers=self.session_manager.get_headers(), params=params)
+        response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         return response.json()
 

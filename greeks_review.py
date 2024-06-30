@@ -1,4 +1,4 @@
-import constants
+import parameters
 from account import Account
 
 class GreeksReview:
@@ -15,9 +15,9 @@ class GreeksReview:
             theta = greeks.get('theta', 0)
             buying_power = account.get_balance().get('buying_power', 0)
 
-            delta_status = self.evaluate_greek(delta, net_liq, constants.MAX_DELTA_PCT)
-            theta_status = self.evaluate_greek(theta, net_liq, constants.MAX_THETA_PCT)
-            bp_used_status = self.evaluate_buying_power(buying_power, net_liq, constants.MAX_BUYING_POWER_PCT)
+            delta_status = self.evaluate_greek(delta, net_liq, parameters.MAX_DELTA_PCT)
+            theta_status = self.evaluate_greek(theta, net_liq, parameters.MAX_THETA_PCT)
+            bp_used_status = self.evaluate_buying_power(buying_power, net_liq, parameters.MAX_BUYING_POWER_PCT)
 
             review_results[account.account_number] = {
                 'delta': {'value': delta, 'status': delta_status},
