@@ -1,9 +1,9 @@
 import requests
 from constants import BASE_URL, LOGIN, PASSWORD
-
 class SessionManager:
     def __init__(self):
         self.session_token = None
+        self.create_session()
 
     def create_session(self):
         url = f'{BASE_URL}/sessions'
@@ -25,18 +25,14 @@ class SessionManager:
     def get_headers(self):
         session_token = self.get_session_token()
         return {
-            'Authorization': f'{session_token}',
+            'Authorization': session_token,  # Changed to exclude 'Bearer'
             'Content-Type': 'application/json'
         }
 
     def test_connection(self):
-        headers = self.get_headers()
         url = f'{BASE_URL}/sessions/validate'
-        response = requests.get(url, headers=headers)
-        if response.status_code == 401:
-            return {'error': '401 Unauthorized. Invalid session token.'}
-        try:
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.HTTPError as e:
-            return {'error': str(e)}
+        headers = self.get_headers()
+        response = requests.post(url, headers=headers)
+        if response.status_code not in (200, 201):
+            return {'error': f"{response.status_code} Client Error: {response.reason} for url: {url}"}
+        return {'status': 'success'}

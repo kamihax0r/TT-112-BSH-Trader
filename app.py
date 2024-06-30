@@ -7,35 +7,44 @@ from account import Account
 from instruments import Instruments
 from greeks_review import GreeksReview
 from trade_finder import TradeFinder
+from datetime import datetime
+import logging
+import requests
+
 
 app = Flask(__name__)
 
+# Initialize global variables
 session_manager = SessionManager()
-orders_info = None
-customer_info = None
+session_manager.create_session()
+headers = session_manager.get_headers()
+
+# Initialize the app
 account_positions = {}
 account_balances = {}
 accounts = []  # Initialize the global accounts list
-streamer = None
-instruments = None
-greeks_review = None
-trade_finder = None
+
+trade_finder = TradeFinder(session_manager)
+# Initialize orders
+orders_info = Orders(session_manager)
+instruments = Instruments(session_manager)
+
+# Initialize the customer info
+customer_info = CustomerInfo(headers)
+# Fetch account numbers
+account_numbers = customer_info.get_acct_numbers()
+# Initialize Greeks review
+greeks_review = GreeksReview(accounts)
+# Initialize and start the streamer
+streamer = Streamer(session_manager, account_numbers)
+streamer.start()
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
 
 def initialize_app():
-    global orders_info, customer_info, account_positions, account_balances, accounts, streamer, instruments, greeks_review, trade_finder
+    global orders_info, customer_info, account_positions, account_balances, accounts, streamer, instruments, greeks_review, trade_finder, session_manager
     try:
-        session_manager.create_session()
-        headers = session_manager.get_headers()
-        print(f"Headers in initialize_app: {headers}")
-
-        # Initialize the customer info
-        customer_info = CustomerInfo(headers)
-        # Initialize orders
-        orders_info = Orders(session_manager)
-
-        # Fetch account numbers
-        account_numbers = customer_info.get_acct_numbers()
-
         # Fetch positions and balances for all accounts and store them
         for account_number in account_numbers:
             account = Account(account_number, session_manager)
@@ -44,20 +53,8 @@ def initialize_app():
             account_positions[account_number] = positions
             account_balances[account_number] = balance
             accounts.append(account)
-
-        # Initialize Greeks review
-        greeks_review = GreeksReview(accounts)
-
-        # Initialize and start the streamer
-        streamer = Streamer(session_manager, account_numbers)
-        streamer.start()
-        
-        # Initialize an instance of instruments to call functions when needed
-        instruments = Instruments(session_manager)
-        
-        # Initialize the trade finder
-        trade_finder = TradeFinder(session_manager)
-
+        return
+    
     except Exception as e:
         print(f"Error during initialization: {e}")
 
@@ -65,7 +62,7 @@ def initialize_app():
 def home():
     return 'Welcome to the Tastytrade API Flask app!'
 
-@app.route('/test-connection', methods=['GET'])
+@app.route('/test-connection', methods=['POST'])
 def test_connection_route():
     result = session_manager.test_connection()
     if 'error' in result:
@@ -209,31 +206,47 @@ def review_greeks_route():
     
 @app.route('/find-and-place-ES-LT112', methods=['POST'])
 def find_and_place_ES_LT112():
-    global trade_finder, orders_info
-    if not trade_finder or not orders_info:
-        return jsonify({'error': 'TradeFinder or Orders instance not initialized'}), 500
-
-    try:
-        es_trade = trade_finder.find_ES_LT112()
-        if not es_trade:
-            return jsonify({'error': 'No suitable ES LT112 trade found'}), 400
-
-        account_numbers = customer_info.get_acct_numbers()
-        if not account_numbers:
-            return jsonify({'error': 'No accounts found for the user'}), 400
-
+    global trade_finder, orders
+    
+    if not trade_finder or not orders:
+        return jsonify({"error": "TradeFinder or Orders instance not initialized"}), 500
+    
+    es_trade = trade_finder.find_ES_LT112()
+    
+    if es_trade:
+        # Place both trades
         order_ids = []
         for trade in [es_trade['trade1'], es_trade['trade2']]:
-            for account_number in account_numbers:
-                response = orders_info.submit_order(account_number, trade)
-                if 'error' in response:
-                    return jsonify(response), 400
-                order_ids.append(response['data']['order-id'])
+            response = orders.place_order(trade)
+            if response.status_code == 200:
+                order_id = response.json()['data']['order_id']
+                order_ids.append(order_id)
+            else:
+                return jsonify({"error": "Failed to place trade", "details": response.json()}), 500
+        
+        return jsonify({"order_ids": order_ids}), 200
+    else:
+        return jsonify({"error": "No suitable 112 trade found"}), 400
 
-        return jsonify({'order_ids': order_ids})
+@app.route('/nested-futures-options-chains', methods=['GET'])
+def get_nested_futures_options_chains():
+    global instruments, session_manager
+    print(f"Auth Token Inside Our Endpoint: {session_manager.get_session_token()}")
+    if not instruments:
+        instruments = Instruments(session_manager)
+    try:
+        symbol = "/ES"
+        expiration_date = request.args.get('expiration_date')  # Assuming the expiration date is passed as a query parameter
+        if not expiration_date:
+            return jsonify({'error': 'Expiration date is required'}), 400
+
+        options_chain = instruments.list_nested_futures_option_chains(symbol, expiration_date)
+        return jsonify({'options_chain': options_chain}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f"Error retrieving nested futures options chains: {e}"}), 500
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    app.debug = True
+    #Initialize necessary variables
     initialize_app()
-    app.run(debug=True)
+    app.run()
