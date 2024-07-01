@@ -32,6 +32,7 @@ class SessionManager:
     def test_connection(self):
         url = f'{BASE_URL}/sessions/validate'
         headers = self.get_headers()
+        print(f"Test Connection Headers {headers}")
         response = requests.post(url, headers=headers)
         if response.status_code not in (200, 201):
             return {'error': f"{response.status_code} Client Error: {response.reason} for url: {url}"}
