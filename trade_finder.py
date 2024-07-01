@@ -32,7 +32,7 @@ class TradeFinder:
             
             for exp_date in dates_to_check:
                 print(f"Checking expiration date: {exp_date}")
-                option_chain = self.instruments.list_future_options(symbol=symbol, expiration_date=exp_date)
+                option_chain = self.get_nested_futures_options_chains(symbol, exp_date)
 
                 if option_chain and 'data' in option_chain and 'items' in option_chain['data']:
                     options = option_chain['data']['items']

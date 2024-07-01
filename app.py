@@ -26,7 +26,7 @@ accounts = []  # Initialize the global accounts list
 
 trade_finder = TradeFinder(session_manager)
 # Initialize orders
-orders_info = Orders(session_manager)
+orders = Orders(session_manager)
 instruments = Instruments(session_manager)
 
 # Initialize the customer info
@@ -43,7 +43,7 @@ streamer.start()
 logging.basicConfig(level=logging.DEBUG)
 
 def initialize_app():
-    global orders_info, customer_info, account_positions, account_balances, accounts, streamer, instruments, greeks_review, trade_finder, session_manager
+    global orders, customer_info, account_positions, account_balances, accounts, streamer, instruments, greeks_review, trade_finder, session_manager
     try:
         # Fetch positions and balances for all accounts and store them
         for account_number in account_numbers:
@@ -137,7 +137,7 @@ def all_accounts_greeks_route():
 
 @app.route('/orders/<account_number>', methods=['GET'])
 def get_orders_route(account_number):
-    global orders_info
+    global orders
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     underlying_symbol = request.args.get('underlying_symbol')
@@ -147,16 +147,16 @@ def get_orders_route(account_number):
     page_offset = request.args.get('page_offset', 0)
 
     try:
-        orders = orders_info.search_orders(account_number, start_date, end_date, underlying_symbol, status, sort, per_page, page_offset)
+        orders = orders.search_orders(account_number, start_date, end_date, underlying_symbol, status, sort, per_page, page_offset)
         return jsonify({'orders': orders})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/orders/<account_number>/<order_id>', methods=['GET'])
 def get_order_by_id_route(account_number, order_id):
-    global orders_info
+    global orders
     try:
-        orders = orders_info.search_orders(account_number)
+        orders = orders.search_orders(account_number)
         order = next((order for order in orders['data']['items'] if order['order-id'] == order_id), None)
         if not order:
             return jsonify({'error': 'Order not found'}), 404
@@ -166,7 +166,7 @@ def get_order_by_id_route(account_number, order_id):
 
 @app.route('/orders/all', methods=['GET'])
 def get_all_orders_route():
-    global customer_info, orders_info
+    global customer_info, orders
     if not customer_info:
         return jsonify({'error': 'Customer info instance not initialized'}), 500
 
@@ -174,7 +174,7 @@ def get_all_orders_route():
         account_numbers = customer_info.get_acct_numbers()
         all_orders = {}
         for account_number in account_numbers:
-            orders = orders_info.search_orders(account_number)
+            orders = orders.search_orders(account_number)
             all_orders[account_number] = orders
         return jsonify({'all_orders': all_orders})
     except Exception as e:
